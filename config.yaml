@@ -1,0 +1,53 @@
+# Settings 
+
+seed: 42
+device: auto            # auto = use GPU if there is one, otherwise CPU
+
+# ---------- data ----------
+data_folder: data/mage  # folder with train.csv, valid.csv and test.csv from MAGE
+max_per_task: 3000      # how many training texts to use for each LLM (half AI, half human)
+max_test_per_task: 600  # how many test texts for each LLM
+max_words: 128          # texts are cut to this many words
+vocab_size: 20000       # how many different words the models know
+
+# The LLMs arrive one after the other, in the order they were released (oldest first).
+# This simulates new LLMs coming out over time. (Release dates are approximate.)
+
+families:
+  gpt_j: ["gpt_j"]                          # GPT-J            - Jun 2021
+  t0: ["_t0_"]                              # T0 (3B, 11B)     - Oct 2021
+  gpt_neox: ["gpt_neox"]                    # GPT-NeoX-20B     - Feb 2022
+  davinci_002: ["text-davinci-002"]         # text-davinci-002 - Mar 2022
+  opt: ["opt_"]                             # OPT and OPT-IML  - May 2022
+  bloom: ["bloom"]                          # BLOOM 7B         - Jul 2022
+  glm: ["GLM"]                              # GLM-130B         - Aug 2022
+  flan_t5: ["flan_t5"]                      # Flan-T5          - Oct 2022
+  davinci_003: ["text-davinci-003"]         # text-davinci-003 - Nov 2022
+  llama: ["_7B", "_13B", "_30B", "_65B"]    # LLaMA            - Feb 2023
+  gpt_35_turbo: ["gpt-3.5"]                 # GPT-3.5-turbo    - Mar 2023
+
+# ---------- detector (transformer) ----------
+embed_size: 128
+num_heads: 4
+num_layers: 2
+
+# ---------- training ----------
+method: cgl             # cgl (my method), static, finetune, or full_retrain
+epochs: 3
+batch_size: 32
+lr: 0.0005
+use_amp: true           # faster training on GPU (ignored on CPU)
+
+# ---------- CGL settings ----------
+replay_ratio: 1.0       # how many fake samples to make for every real sample of the new LLM
+ewc_lambda: 0           # how strongly to protect old knowledge with EWC (0 = off; 50 made forgetting worse in my tests)
+encoder_lr_scale: 0.1   # after the first LLM the encoder learns 10x slower than the head ("slow learner")
+
+# ---------- generator ----------
+# The generator makes fake FEATURE VECTORS (the 128 numbers the detector turns a text into)
+
+generator_type: diffusion   # diffusion (like DDGR, Gao & Liu 2023) or gaussian (simplest, to compare)
+gen_steps: 5000             # training steps for the diffusion generator (it is small, so this is quick)
+gen_lr: 0.002
+gen_hidden_size: 512        # size of the diffusion network
+diffusion_steps: 50         # how many steps the diffusion uses to turn noise into a feature vector
