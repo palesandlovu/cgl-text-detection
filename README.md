@@ -1,4 +1,5 @@
 
+GitHub: https://github.com/palesandlovu/cgl-text-detection
 
 ## What is compared
 
@@ -65,6 +66,9 @@ python main.py --mode compare --max_per_task 1000 --epochs 2 --gen_steps 3000 --
 ```
 python main.py --mode detect --checkpoint outputs/final/cgl/checkpoints/after_task11.pt --text "Paste some text here"
 ```
+You can change any setting in config.yaml, or on the command line, for example --epochs 3, --lr 0.001, --replay_ratio 0 (turns replay off) or --generator gaussian (uses a simpler generator). You can also run more than one seed with --seeds 42 1 2.
+
+While it trains it prints the loss, accuracy, speed, RAM and how well the replay is working. After every LLM it shows the accuracy on the old, new and unseen LLMs. Everything is also saved in the outputs folder (train_log.txt, results.json and comparison_table.md).
 
 ## What you see
 
@@ -72,7 +76,10 @@ All results are printed in the terminal. At the end of the real run you will see
 did after every step, and a final table comparing the four. The numbers are also saved in the
 `outputs/final` folder.
 
-What the main numbers mean:
+Try the detector on your own text
+python main.py --mode detect --checkpoint outputs/final/cgl/checkpoints/after_task11.pt --text "Paste some text here"
+
+It prints the chance that the text is AI-generated and its verdict.
 
 - **Accuracy:** how often the detector is right. 0.5 is the same as guessing; 1.0 is always right.
 - **Forgetting:** how much worse it got on old AI tools after learning new ones. Lower is better.
