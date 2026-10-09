@@ -1,14 +1,18 @@
+##PK Ndlovu
 
 GitHub: https://github.com/palesandlovu/cgl-text-detection
 
 ## What is compared
 
-Four ways of keeping a detector up to date are tested:
+Seven ways of keeping a detector up to date are tested:
 
 - **static:** learns the first AI tool only and never changes.
 - **finetune:** learns only the newest AI tool each time.
 - **full_retrain:** starts from zero and learns everything again each time.
 - **cgl:** learns the newest AI tool plus fake reminders of the old ones. This is my method.
+- **cgl_no_replay:** cgl with the fake reminders switched off (slow encoder only). Shows what the replay adds.
+- **cgl_gaussian:** cgl with the simplest possible generator instead of the diffusion model. Shows whether diffusion is needed.
+- **exemplar:** keeps 500 real old texts (as word numbers) and mixes them into training. The simplest alternative to fake reminders.
 
 ## The data
 
@@ -20,27 +24,22 @@ AI tools.
 - `main.py` – start here; it runs everything
 - `config.yaml` – the settings, such as how much data to use and the list of AI tools
 - `data.py` – loads the texts and splits them into the 11 steps
-- `models.py` – the detector and the memory helper
-- `train.py` – trains and tests the four approaches
+- `models.py` – the detector and the memory helpers (diffusion and Gaussian generators, EWC)
+- `train.py` – trains and tests all the methods
 - `requirements.txt` – the extra Python packages needed
 
 ## How to run it
 
-**Step 1.** Install Python (version 3.10 to 3.12).
-
-**Step 2.** Download MAGE's three files (`train.csv`, `valid.csv` and `test.csv`) and put them in
+Download MAGE's three files (`train.csv`, `valid.csv` and `test.csv`) and put them in
 a folder called `data/mage` inside the project folder.
 
-**Step 3.** Open the project folder in VS Code. Open a terminal (*Terminal → New Terminal*) and
-type these lines one at a time:
-
+Open a terminal (*Terminal → New Terminal*) and type these lines one at a time:
 ```
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
-
-**Step 4.** Run the project. Type each command on one line and press Enter. Don't use VS Code's
+Run the project. Type each command on one line and press Enter. Don't use VS Code's
 Run button.
 
 Check that the data loads properly (about one minute):
@@ -55,35 +54,53 @@ Do a quick test to make sure everything works (a few minutes):
 python main.py --mode compare --max_per_task 300 --epochs 1 --gen_steps 1000 --output outputs/test
 ```
 
-Do the real run (about 30 to 40 minutes):
+Do the real run, the one used in the paper (all seven methods, five seeds). The default settings in
+`config.yaml` are the paper's settings (1,000 texts per AI tool, 2 epochs, 3,000 generator steps). This
+takes several hours on a laptop CPU:
 
 ```
-python main.py --mode compare --max_per_task 1000 --epochs 2 --gen_steps 3000 --output outputs/final
+python main.py --mode compare --seeds 42 1 2 3 4 --output outputs/final
 ```
 
-**Optional.** Try the detector on your own text:
+To run only some methods, add for example `--methods cgl finetune`. To run one method on its own:
 
 ```
-python main.py --mode detect --checkpoint outputs/final/cgl/checkpoints/after_task11.pt --text "Paste some text here"
+python main.py --mode train --method cgl --output outputs/cgl_only
 ```
-You can change any setting in config.yaml, or on the command line, for example --epochs 3, --lr 0.001, --replay_ratio 0 (turns replay off) or --generator gaussian (uses a simpler generator). You can also run more than one seed with --seeds 42 1 2.
 
-While it trains it prints the loss, accuracy, speed, RAM and how well the replay is working. After every LLM it shows the accuracy on the old, new and unseen LLMs. Everything is also saved in the outputs folder (train_log.txt, results.json and comparison_table.md).
+You can change any setting in config.yaml, or on the command line, for example --epochs 3, --lr 0.001,
+--replay_ratio 0, --generator gaussian or --buffer_size 1000.
+
+While it trains it prints the loss, accuracy, speed, RAM and how well the replay is working. After every
+LLM it shows the accuracy on the old, new and unseen LLMs. Everything is also saved in the outputs folder
+(train_log.txt, results.json and comparison_table.md).
 
 ## What you see
 
 All results are printed in the terminal. At the end of the real run you will see how each approach
-did after every step, and a final table comparing the four. The numbers are also saved in the
-`outputs/final` folder.
-
-Try the detector on your own text
-python main.py --mode detect --checkpoint outputs/final/cgl/checkpoints/after_task11.pt --text "Paste some text here"
-
-It prints the chance that the text is AI-generated and its verdict.
+did after every step, and a final table comparing all seven (mean ± spread over the five seeds). The
+numbers are also saved in `outputs/final/comparison_table.md`.
 
 - **Accuracy:** how often the detector is right. 0.5 is the same as guessing; 1.0 is always right.
-- **Forgetting:** how much worse it got on old AI tools after learning new ones. Lower is better.
+- **Forgetting:** how much worse it got on old AI tools after learning new ones (best accuracy after
+  learning a tool, minus its accuracy at the end). Lower is better.
 - **Training time:** how many seconds it took to learn. Lower is better.
-- **Memory kept:** how much storage it needs between steps. Lower is better.
+- **Memory kept:** how much has to be stored between steps. Lower is better. For full retraining this is
+  shown twice: as raw text, and as the word numbers the model actually reads.
 
+## Try the detector on your own text
 
+```
+python main.py --mode detect --checkpoint outputs/final/seed42/cgl/checkpoints/after_task11.pt --text "Paste some text here"
+```
+
+It prints the chance that the text is AI-generated and its verdict. (With a single seed the checkpoint
+is in `outputs/final/cgl/checkpoints/` instead.)
+
+## See what the generator learned
+
+```
+python main.py --mode generate --checkpoint outputs/final/seed42/cgl/checkpoints/after_task11.pt --n 20
+```
+
+This only works for cgl checkpoints, because only cgl trains a generator.
