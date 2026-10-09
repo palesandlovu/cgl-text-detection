@@ -1,6 +1,0 @@
-torch
-numpy
-pandas
-scikit-learn
-pyyaml
-psutil
